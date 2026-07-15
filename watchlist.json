@@ -1,0 +1,11 @@
+{
+  "_note": "mmsi(9桁)が入っている船だけ追跡します。空欄は対象外。船は入れ替わるので随時更新してください(MarineTraffic/VesselFinderで船名検索→MMSI確認)。",
+  "_verified": "MMSIは2026-07時点のWeb調査で記入。ASOG/JRTI/Doug/Bobは確認済み。OCISLYは西海岸のバージでMMSI未確定=要確認。Megan/Shannonは2025年引退のため除外。",
+  "vessels": [
+    { "name": "ASOG (A Shortfall of Gravitas)", "mmsi": "368219910" },
+    { "name": "JRTI (Just Read the Instructions)", "mmsi": "368219920" },
+    { "name": "Doug (回収船)", "mmsi": "368485000" },
+    { "name": "Bob (回収船)", "mmsi": "368456000" },
+    { "name": "OCISLY (Of Course I Still Love You)", "mmsi": "" }
+  ]
+}
