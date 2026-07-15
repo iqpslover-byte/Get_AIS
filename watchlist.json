@@ -1,11 +1,14 @@
 {
-  "_note": "mmsi(9桁)が入っている船だけ追跡します。空欄は対象外。船は入れ替わるので随時更新してください(MarineTraffic/VesselFinderで船名検索→MMSI確認)。",
-  "_verified": "MMSIは2026-07時点のWeb調査で記入。ASOG/JRTI/Doug/Bobは確認済み。OCISLYは西海岸のバージでMMSI未確定=要確認。Megan/Shannonは2025年引退のため除外。",
+  "_note": "mmsi(9桁)が入っている船だけ追跡します。空欄は対象外。cat=カテゴリ(アプリ側の色分け用)。船は入れ替わるので随時更新してください(MarineTraffic/VesselFinderで船名検索→MMSI確認)。",
+  "_verified": "MMSIは2026-07時点のWeb調査で記入。SpaceX(ASOG/JRTI/Doug/Bob)・中国遠望(Yuanwang 5/6/7)は確認済み。OCISLYは西海岸バージでMMSI未確定=要確認。Megan/Shannonは2025年引退で除外。",
   "vessels": [
-    { "name": "ASOG (A Shortfall of Gravitas)", "mmsi": "368219910" },
-    { "name": "JRTI (Just Read the Instructions)", "mmsi": "368219920" },
-    { "name": "Doug (回収船)", "mmsi": "368485000" },
-    { "name": "Bob (回収船)", "mmsi": "368456000" },
-    { "name": "OCISLY (Of Course I Still Love You)", "mmsi": "" }
+    { "name": "ASOG (A Shortfall of Gravitas)", "mmsi": "368219910", "cat": "SpaceX" },
+    { "name": "JRTI (Just Read the Instructions)", "mmsi": "368219920", "cat": "SpaceX" },
+    { "name": "Doug (回収船)", "mmsi": "368485000", "cat": "SpaceX" },
+    { "name": "Bob (回収船)", "mmsi": "368456000", "cat": "SpaceX" },
+    { "name": "OCISLY (Of Course I Still Love You)", "mmsi": "", "cat": "SpaceX" },
+    { "name": "Yuanwang 5 (遠望5号 追跡船)", "mmsi": "413289000", "cat": "China" },
+    { "name": "Yuanwang 6 (遠望6号 追跡船)", "mmsi": "413326000", "cat": "China" },
+    { "name": "Yuanwang 7 (遠望7号 追跡船)", "mmsi": "413379290", "cat": "China" }
   ]
 }

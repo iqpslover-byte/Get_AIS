@@ -26,14 +26,17 @@ DEBUG = os.environ.get("AIS_DEBUG") == "1"   # 診断: フロリダ沿岸の全A
 
 
 def load_watchlist():
-    """watchlist.json -> {mmsi(str): name(str)}  (mmsi が空の行は無視)"""
+    """watchlist.json -> {mmsi(str): {"name":str, "cat":str}}  (mmsi が空の行は無視)"""
     with open("watchlist.json", encoding="utf-8") as f:
         wl = json.load(f)
     m = {}
     for v in wl.get("vessels", []):
         mmsi = str(v.get("mmsi", "")).strip()
         if mmsi:
-            m[mmsi] = (v.get("name", "") or "").strip()
+            m[mmsi] = {
+                "name": (v.get("name", "") or "").strip(),
+                "cat": (v.get("cat", "") or "").strip(),   # カテゴリ(アプリ側の色分け用)
+            }
     return m
 
 
@@ -127,9 +130,11 @@ async def collect(mmsi_map):
             lon = pr.get("Longitude")
             if lat is None or lon is None:
                 continue
+            info = mmsi_map[mmsi]
             latest[mmsi] = {
                 "mmsi": mmsi,
-                "name": mmsi_map.get(mmsi) or (meta.get("ShipName", "") or "").strip(),
+                "name": info["name"] or (meta.get("ShipName", "") or "").strip(),
+                "cat": info.get("cat", ""),
                 "lat": lat,
                 "lon": lon,
                 "cog": pr.get("Cog"),          # 対地進路(度)
