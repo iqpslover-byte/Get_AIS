@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: "*/20 * * * *"   # 20分ごと(必要なら変更)
   workflow_dispatch:          # 手動実行も可
+    inputs:
+      debug:
+        description: "1=診断モード(FL沿岸の全AISを数える・json更新なし)"
+        default: "0"
 
 permissions:
   contents: write
@@ -29,6 +33,7 @@ jobs:
         env:
           AISSTREAM_KEY: ${{ secrets.AISSTREAM_KEY }}
           AIS_COLLECT_SECONDS: "90"
+          AIS_DEBUG: ${{ github.event.inputs.debug }}
         run: python fetch_ais.py
 
       - name: Commit vessels.json

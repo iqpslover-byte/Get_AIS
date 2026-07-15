@@ -22,6 +22,7 @@ API_KEY = os.environ.get("AISSTREAM_KEY")
 COLLECT_SECONDS = int(os.environ.get("AIS_COLLECT_SECONDS", "90"))
 OUT = os.environ.get("AIS_OUT", "data/vessels.json")
 WS_URL = "wss://stream.aisstream.io/v0/stream"
+DEBUG = os.environ.get("AIS_DEBUG") == "1"   # 診断: フロリダ沿岸の全AISを数える(MMSIフィルタなし・json更新なし)
 
 
 def load_watchlist():
@@ -46,6 +47,45 @@ def load_prev():
     except Exception:
         pass
     return prev
+
+
+async def debug_collect():
+    """診断: フロリダ沿岸(Canaveral周辺)の全PositionReportを数える。認証/ストリームの生存確認用。"""
+    sub = {
+        "APIKey": API_KEY,
+        "BoundingBoxes": [[[24.0, -82.0], [31.0, -78.0]]],
+        "FilterMessageTypes": ["PositionReport"],
+    }
+    total = 0
+    seen = {}
+    end = time.time() + 60
+    async with websockets.connect(WS_URL, ping_interval=20, close_timeout=5) as ws:
+        await ws.send(json.dumps(sub))
+        while time.time() < end:
+            remaining = end - time.time()
+            if remaining <= 0:
+                break
+            try:
+                raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+            except asyncio.TimeoutError:
+                break
+            try:
+                msg = json.loads(raw)
+            except Exception:
+                continue
+            if msg.get("MessageType") != "PositionReport":
+                print("non-position msg:", str(msg)[:200], file=sys.stderr)
+                continue
+            total += 1
+            meta = msg.get("MetaData", {}) or {}
+            seen[str(meta.get("MMSI", ""))] = (meta.get("ShipName", "") or "").strip()
+    print(f"[DEBUG] total PositionReports in 60s (FL coast): {total}")
+    print(f"[DEBUG] distinct vessels: {len(seen)}")
+    wl = load_watchlist()
+    hit = [m for m in wl if m in seen]
+    print(f"[DEBUG] watchlist vessels seen: {hit if hit else 'none'}")
+    for i, (m, n) in enumerate(list(seen.items())[:20]):
+        print(f"   {m}  {n}")
 
 
 async def collect(mmsi_map):
@@ -104,6 +144,9 @@ def main():
     if not API_KEY:
         print("ERROR: AISSTREAM_KEY が未設定です", file=sys.stderr)
         sys.exit(1)
+    if DEBUG:
+        asyncio.get_event_loop().run_until_complete(debug_collect())
+        return
     mmsi_map = load_watchlist()
     if not mmsi_map:
         print("WARN: watchlist.json に有効な MMSI がありません(追跡対象なし)", file=sys.stderr)
