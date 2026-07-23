@@ -145,29 +145,50 @@ def load_prev():
 
 
 async def _run(sub, seconds, on_position):
+    """収集時間 seconds の予算内で、接続失敗(HTTP 503 等)や途中切断があれば
+    指数バックオフで再接続を繰り返す。予算内に一度も接続できなければ例外を上げる
+    (=Actions が赤く残り「真の停止」の判別/updated 凍結による復旧検知を維持)。"""
     end = time.time() + seconds
-    async with websockets.connect(WS_URL, ping_interval=20, close_timeout=5) as ws:
-        await ws.send(json.dumps(sub))
-        while time.time() < end:
+    attempt = 0
+    connected_once = False
+    while time.time() < end:
+        try:
+            async with websockets.connect(WS_URL, ping_interval=20, close_timeout=5) as ws:
+                connected_once = True
+                attempt = 0  # 良い接続が取れたらバックオフをリセット
+                await ws.send(json.dumps(sub))
+                while time.time() < end:
+                    remaining = end - time.time()
+                    if remaining <= 0:
+                        return
+                    try:
+                        raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                    except asyncio.TimeoutError:
+                        return  # 予算いっぱいまで受信=正常終了
+                    except Exception as e:
+                        print("recv error:", e, file=sys.stderr)
+                        break  # 途中切断 -> 外側ループで再接続
+                    try:
+                        msg = json.loads(raw)
+                    except Exception:
+                        continue
+                    if msg.get("MessageType") != "PositionReport":
+                        continue
+                    meta = msg.get("MetaData", {}) or {}
+                    pr = (msg.get("Message", {}) or {}).get("PositionReport", {}) or {}
+                    on_position(meta, pr)
+        except Exception as e:
+            # 接続/ハンドシェイク失敗(HTTP 503 等) -> バックオフして再試行
+            attempt += 1
             remaining = end - time.time()
             if remaining <= 0:
                 break
-            try:
-                raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
-            except asyncio.TimeoutError:
-                break
-            except Exception as e:
-                print("recv error:", e, file=sys.stderr)
-                break
-            try:
-                msg = json.loads(raw)
-            except Exception:
-                continue
-            if msg.get("MessageType") != "PositionReport":
-                continue
-            meta = msg.get("MetaData", {}) or {}
-            pr = (msg.get("Message", {}) or {}).get("PositionReport", {}) or {}
-            on_position(meta, pr)
+            wait = min(30, 3 * (2 ** (attempt - 1)))   # 3,6,12,24,30...
+            wait = min(wait, max(0.0, remaining))
+            print(f"connect/stream error (attempt {attempt}): {e} -> retry in {wait:.0f}s", file=sys.stderr)
+            await asyncio.sleep(wait)
+    if not connected_once:
+        raise RuntimeError("AISStream に予算時間内で接続できませんでした (HTTP 503 等)")
 
 
 async def collect(boxes, wl, seconds, mmsi_filter=None, in_zone=False):
